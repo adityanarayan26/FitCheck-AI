@@ -40,7 +40,7 @@ const DashboardPage = () => {
   return (
     <div className='h-screen w-full bg-zinc-300 '>
       <DashboardSidebar activeComponent={activeComponent} setActiveComponent={setActiveComponent} />
-      <main className='pl-16 h-full overflow-y-auto'>
+      <main className='pl-10 h-full overflow-y-auto'>
         {renderComponent()}
       </main>
     </div>

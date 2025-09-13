@@ -1,5 +1,6 @@
 import React from 'react'
-import SignUpForm from '../(components)/SignupForm'
+
+import SignUpForm from '@/app/(components)/SignUpForm'
 
 const page = () => {
   return (
@@ -10,3 +11,4 @@ const page = () => {
 }
 
 export default page
+

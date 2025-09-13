@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${LausanneFont.variable} bg-zinc-900 antialiased`}
+        className={`${LausanneFont.variable}  antialiased`}
       >
         <Stairs>
  <AuthProvider>
