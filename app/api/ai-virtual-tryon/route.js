@@ -10,10 +10,10 @@ const GENERATION_CONFIG = {
   topP: 1,
   topK: 1,
   maxOutputTokens: 8192,
-  responseModalities: ['IMAGE'], // We expect an image back
+  responseModalities: ['IMAGE'],
 };
 
-const MODEL_NAME = "gemini-2.5-flash-image-preview"; // The "nano-banana" model
+const MODEL_NAME = "gemini-2.5-flash-image-preview";
 
 // --- API ROUTE ---
 export async function POST(req) {
@@ -38,7 +38,6 @@ export async function POST(req) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    // Structure the prompt with text and images for the model
     const promptParts = [
       { text: SYSTEM_PROMPT },
       { inlineData: { data: modelImage.data, mimeType: modelImage.type } },
@@ -50,7 +49,6 @@ export async function POST(req) {
       generationConfig: GENERATION_CONFIG,
     });
     
-    // Safely find the image part in the response
     const generatedImagePart = result?.response?.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
 
     if (!generatedImagePart) {
@@ -68,8 +66,9 @@ export async function POST(req) {
 
   } catch (error) {
     console.error("Error in Gemini API route:", error);
-    // Check for rate limiting error (status code 429)
-    if (error.message.includes("429")) {
+    
+    // Improved: Specifically check for rate limiting (429) errors
+    if (error.message && error.message.includes("429")) {
         return NextResponse.json(
             { error: "The service is currently busy due to high demand. Please try again in a minute." },
             { status: 429 }
@@ -77,9 +76,8 @@ export async function POST(req) {
     }
     
     return NextResponse.json(
-      { error: error.message || "An internal server error occurred." },
+      { error: "An internal server error occurred while generating the image." },
       { status: 500 }
     );
   }
 }
-
