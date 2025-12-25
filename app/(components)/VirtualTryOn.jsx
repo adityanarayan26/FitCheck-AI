@@ -2,9 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Shirt, Wand2, ArrowRight, Sparkles, Download, ZoomIn, RefreshCw, Trash2, Clock } from "lucide-react";
+import { User, Shirt, Wand2, ArrowRight, Sparkles, Download, ZoomIn, RefreshCw, Trash2, Clock, Save, Check } from "lucide-react";
 import axios from "axios";
 import FileUploader from "./FileUploader";
+import { useAuth } from "@/context/AuthContext";
+import { saveImage } from "@/lib/firestoreService";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +31,7 @@ const formatCountdown = (seconds) => {
 };
 
 export default function VirtualTryOn() {
+  const { user } = useAuth();
   const [modelImage, setModelImage] = useState({ file: null, preview: null, data: null, type: null });
   const [garmentImage, setGarmentImage] = useState({ file: null, preview: null, data: null, type: null });
   const [generatedImage, setGeneratedImage] = useState(null);
@@ -36,6 +39,8 @@ export default function VirtualTryOn() {
   const [error, setError] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const countdownIntervalRef = useRef(null);
 
   // Check for existing rate limit on mount
@@ -134,6 +139,34 @@ export default function VirtualTryOn() {
     }
   };
 
+  const handleSaveToGallery = async () => {
+    if (!generatedImage || !user?.uid) return;
+
+    setIsSaving(true);
+    try {
+      // Upload to Cloudinary
+      const uploadRes = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageData: generatedImage }),
+      });
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok || !uploadData.url) {
+        throw new Error(uploadData.error || "Failed to upload image");
+      }
+
+      // Save Cloudinary URL to Firestore
+      await saveImage(user.uid, uploadData.url, "virtualTryon");
+      setIsSaved(true);
+    } catch (err) {
+      console.error("Failed to save image:", err);
+      setError("Failed to save image to gallery.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Helper to render compact preview
   const RenderCompactPreview = ({ imageState, setImageState, label, icon: Icon }) => (
     <div className="flex flex-col gap-3">
@@ -163,23 +196,23 @@ export default function VirtualTryOn() {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto min-h-screen">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-600 to-purple-600">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400">
             Virtual Try-On
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Visualize how clothes look on you
+          <p className="text-gray-400 text-sm mt-1">
+            See how outfits look on you instantly
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
         {/* Left Col: Controls & Inputs */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Configuration</h3>
+        <div className="lg:col-span-4 space-y-4 md:space-y-6">
+          <div className="bg-white/80 backdrop-blur-sm p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-lg shadow-fuchsia-100/50 border border-fuchsia-100/50">
+            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-4 md:mb-6">Configuration</h3>
 
             <div className="space-y-6">
               <RenderCompactPreview
@@ -202,7 +235,7 @@ export default function VirtualTryOn() {
             <Button
               onClick={handleSubmit}
               disabled={!modelImage.file || !garmentImage.file || isLoading || isRateLimited}
-              className="w-full mt-8 py-6 text-md font-semibold rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg shadow-pink-200 transition-all disabled:opacity-60"
+              className="w-full mt-8 py-6 text-md font-semibold rounded-xl bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 hover:from-fuchsia-600 hover:via-pink-600 hover:to-amber-500 text-white shadow-lg shadow-fuchsia-200/50 transition-all disabled:opacity-60"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -284,6 +317,21 @@ export default function VirtualTryOn() {
 
                     <Button onClick={handleDownload} variant="secondary" className="rounded-full h-12 w-12 p-0 shadow-lg hover:scale-110 transition-transform">
                       <Download className="w-5 h-5" />
+                    </Button>
+
+                    <Button
+                      onClick={handleSaveToGallery}
+                      disabled={isSaving || isSaved}
+                      variant="secondary"
+                      className="rounded-full h-12 w-12 p-0 shadow-lg hover:scale-110 transition-transform"
+                    >
+                      {isSaving ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-transparent" />
+                      ) : isSaved ? (
+                        <Check className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <Save className="w-5 h-5" />
+                      )}
                     </Button>
                   </div>
                 </div>

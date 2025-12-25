@@ -2,9 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn, Clock } from "lucide-react";
+import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn, Clock, Save, Check } from "lucide-react";
 import axios from "axios";
 import FileUploader from "./FileUploader";
+import { useAuth } from "@/context/AuthContext";
+import { saveImage } from "@/lib/firestoreService";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ const formatCountdown = (seconds) => {
 };
 
 export default function ImageAdvisor() {
+  const { user } = useAuth();
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [response, setResponse] = useState(null);
@@ -27,6 +30,8 @@ export default function ImageAdvisor() {
   const [error, setError] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const countdownIntervalRef = useRef(null);
 
   // Check for existing rate limit on mount
@@ -118,16 +123,57 @@ export default function ImageAdvisor() {
     };
   };
 
+  const handleSaveToGallery = async () => {
+    if (!image || !user?.uid) return;
+
+    setIsSaving(true);
+    try {
+      // Convert image file to base64 data URL
+      const reader = new FileReader();
+      reader.readAsDataURL(image);
+      reader.onload = async () => {
+        const base64DataUrl = reader.result;
+
+        // Upload to Cloudinary
+        const uploadRes = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageData: base64DataUrl }),
+        });
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok || !uploadData.url) {
+          throw new Error(uploadData.error || "Failed to upload image");
+        }
+
+        // Save Cloudinary URL to Firestore
+        await saveImage(user.uid, uploadData.url, "imageAdvisor", {
+          styleAssessment: response?.styleAssessment || null,
+        });
+        setIsSaved(true);
+        setIsSaving(false);
+      };
+      reader.onerror = () => {
+        setError("Failed to save image to gallery.");
+        setIsSaving(false);
+      };
+    } catch (err) {
+      console.error("Failed to save image:", err);
+      setError("Failed to save image to gallery.");
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500">
             Style Advisor
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Get personalized fashion advice from AI
+          <p className="text-gray-400 text-sm mt-1">
+            AI-powered fashion advice for your wardrobe
           </p>
         </div>
         {image && (
@@ -140,14 +186,14 @@ export default function ImageAdvisor() {
 
       {!image ? (
         /* Upload Screen */
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 text-center transition-all duration-500 ease-in-out">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-lg shadow-pink-100/50 border border-pink-100/50 p-6 md:p-12 text-center transition-all duration-500 ease-in-out">
           <div className="max-w-md mx-auto space-y-6">
-            <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-8 h-8 text-purple-600" />
+            <div className="w-20 h-20 bg-gradient-to-br from-rose-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-pink-200/30">
+              <Sparkles className="w-10 h-10 text-rose-500" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Upload Your Outfit</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Upload Your Outfit</h2>
             <p className="text-gray-500">
-              Upload a photo of your clothing item or full outfit to get styling tips, color combinations, and accessory recommendations.
+              Share a photo of your clothing or complete outfit to receive expert styling tips, color harmony suggestions, and accessory pairings.
             </p>
             <FileUploader
               onFileChange={handleFileChange}
@@ -216,6 +262,22 @@ export default function ImageAdvisor() {
                 <Button disabled className="w-full mt-3">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
                   Analyzing...
+                </Button>
+              )}
+              {response && !isLoading && (
+                <Button
+                  onClick={handleSaveToGallery}
+                  disabled={isSaving || isSaved}
+                  className="w-full mt-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-md hover:shadow-lg transition-all"
+                >
+                  {isSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                  ) : isSaved ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  {isSaving ? "Saving..." : isSaved ? "Saved to Gallery" : "Save to Gallery"}
                 </Button>
               )}
             </div>

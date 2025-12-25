@@ -130,27 +130,27 @@
   }
 }
 
-/* Premium Design System */
+/* Premium Design System - Fashion Theme */
 
-/* Gradient Mesh Backgrounds */
+/* Fashion-Inspired Mesh Gradient Backgrounds */
 .bg-mesh-gradient {
   background: 
-    radial-gradient(at 40% 20%, rgba(120, 119, 198, 0.3) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(147, 51, 234, 0.2) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(59, 130, 246, 0.2) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.2) 0px, transparent 50%),
-    linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    radial-gradient(at 40% 20%, rgba(244, 114, 182, 0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(251, 191, 36, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(236, 72, 153, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(253, 164, 175, 0.15) 0px, transparent 50%),
+    linear-gradient(135deg, #fdf2f8 0%, #faf5ff 50%, #f5f3ff 100%);
 }
 
 .dark .bg-mesh-gradient {
   background: 
-    radial-gradient(at 40% 20%, rgba(120, 119, 198, 0.15) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(147, 51, 234, 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(236, 72, 153, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.1) 0px, transparent 50%),
-    linear-gradient(135deg, #0f0f14 0%, #1a1a24 100%);
+    radial-gradient(at 40% 20%, rgba(244, 114, 182, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(251, 191, 36, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(236, 72, 153, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(253, 164, 175, 0.08) 0px, transparent 50%),
+    linear-gradient(135deg, #1a0a10 0%, #0f0a14 100%);
 }
 
 /* Glassmorphism Effects */
