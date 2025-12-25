@@ -1,12 +1,16 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Wand2 } from "lucide-react";
+import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn } from "lucide-react";
 import axios from "axios";
-import Typewriter from "./Typewriter";
 import FileUploader from "./FileUploader";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export default function ImageAdvisor() {
   const [image, setImage] = useState(null);
@@ -22,6 +26,13 @@ export default function ImageAdvisor() {
       setError(null);
       setResponse(null);
     }
+  };
+
+  const handleReset = () => {
+    setImage(null);
+    setImagePreview(null);
+    setResponse(null);
+    setError(null);
   };
 
   const handleSubmit = async () => {
@@ -53,78 +64,196 @@ export default function ImageAdvisor() {
   };
 
   return (
-    <div className="flex justify-center items-start min-h-full p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-5xl">
-        <Card className="shadow-lg border-gray-200 dark:border-gray-800">
-          <CardHeader className="text-center">
-            <div className="inline-flex items-center justify-center mx-auto mb-2">
-                 <Wand2 className="h-8 w-8 text-blue-500" />
-            </div>
-            <CardTitle className="text-3xl font-bold tracking-tight">AI Image Style Advisor</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-            {/* Left Column for Upload and Preview */}
-            <div className="flex flex-col space-y-4">
-              <FileUploader onFileChange={handleFileChange} title="Upload Your Outfit" description="Let's see what you're working with!" />
-              {imagePreview && (
-                <div className="mt-4 rounded-xl overflow-hidden shadow-md border dark:border-gray-700">
-                  <img src={imagePreview} alt="Selected preview" className="w-full h-auto object-cover" />
-                </div>
-              )}
-              <Button onClick={handleSubmit} disabled={!image || isLoading} className="w-full py-3 text-md font-semibold">
-                {isLoading ? "Analyzing..." : (
-                    <div className="flex items-center"><Sparkles className="mr-2 h-5 w-5" /> Get Advice</div>
-                )}
-              </Button>
-              {error && <p className="text-sm text-red-500 text-center pt-2">{error}</p>}
-            </div>
-
-            {/* Right Column for AI Response */}
-            <div className="w-full min-h-[400px] bg-gray-100 dark:bg-gray-800/50 rounded-xl p-6">
-              {isLoading && (
-                <div className="space-y-4 pt-2">
-                  <Skeleton className="h-6 w-1/3" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-6 w-1/2 mt-6" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-4/5" />
-                </div>
-              )}
-
-              {response && !isLoading && (
-                <div className="space-y-6 text-sm text-gray-800 dark:text-gray-200">
-                  <div className="p-4 bg-white/50 dark:bg-gray-900/50 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Style Assessment:</h3>
-                    <p className="leading-relaxed"><Typewriter text={response.styleAssessment} /></p>
-                  </div>
-                  <div className="p-4 bg-white/50 dark:bg-gray-900/50 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Color & Composition:</h3>
-                    <p className="leading-relaxed"><Typewriter text={response.colorCompositionAnalysis} /></p>
-                  </div>
-                  <div className="p-4 bg-white/50 dark:bg-gray-900/50 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Recommendations:</h3>
-                    <div className="space-y-2 leading-relaxed">
-                      <p><strong>Accessory:</strong> <Typewriter text={response.stylingRecommendations.accessory} /></p>
-                      <p><strong>Reasoning:</strong> <Typewriter text={response.stylingRecommendations.reasoning} /></p>
-                      <p><strong>Alternative:</strong> <Typewriter text={response.stylingRecommendations.alternativeStyling} /></p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!isLoading && !response && (
-                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
-                    <Sparkles className="h-16 w-16 mb-4 opacity-50" />
-                    <h3 className="font-semibold text-lg">Your AI style advice will appear here.</h3>
-                    <p className="text-sm">Upload an image of your outfit to get started!</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+            Style Advisor
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Get personalized fashion advice from AI
+          </p>
+        </div>
+        {image && (
+          <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            New Upload
+          </Button>
+        )}
       </div>
+
+      {!image ? (
+        /* Upload Screen */
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 text-center transition-all duration-500 ease-in-out">
+          <div className="max-w-md mx-auto space-y-6">
+            <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-8 h-8 text-purple-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Upload Your Outfit</h2>
+            <p className="text-gray-500">
+              Upload a photo of your clothing item or full outfit to get styling tips, color combinations, and accessory recommendations.
+            </p>
+            <FileUploader
+              onFileChange={handleFileChange}
+              title="Click to Upload or Drag & Drop"
+              description="Supports JPG, PNG, WEBP"
+            />
+          </div>
+        </div>
+      ) : (
+        /* Analysis Screen */
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+          {/* Left Sidebar: Image & Controls */}
+          <div className="md:col-span-4 lg:col-span-3 space-y-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3">
+              <div className="relative group overflow-hidden rounded-xl aspect-[3/4] bg-gray-50">
+                <img
+                  src={imagePreview}
+                  alt="Outfit"
+                  className="w-full h-full object-cover"
+                />
+
+                {/* View Image Dialog */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="secondary" className="gap-2 pointer-events-auto shadow-lg">
+                        <ZoomIn className="w-3 h-3" /> View
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-screen-lg p-0 bg-transparent border-0 shadow-none overflow-hidden flex flex-col items-center justify-center h-screen w-screen focus:outline-none" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="relative w-auto h-auto max-w-[90vw] max-h-[85vh] group">
+                        <img
+                          src={imagePreview}
+                          alt="Full view"
+                          className="w-full h-full object-contain rounded-md shadow-2xl bg-black/50"
+                        />
+                        <DialogClose asChild>
+                          <button className="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors">
+                            <span className="sr-only">Close</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                          </button>
+                        </DialogClose>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              {!response && !isLoading && (
+                <Button
+                  onClick={handleSubmit}
+                  className="w-full mt-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md hover:shadow-lg transition-all"
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Analyze Style
+                </Button>
+              )}
+              {isLoading && (
+                <Button disabled className="w-full mt-3">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Analyzing...
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Content: Analysis Results */}
+          <div className="md:col-span-8 lg:col-span-9">
+            {error && (
+              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-3">
+                <div className="p-1 bg-red-100 rounded-full shrink-0">!</div>
+                {error}
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="bg-white rounded-3xl border border-gray-100 p-8 space-y-6">
+                <div className="flex items-center gap-4 mb-8">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <div className="grid grid-cols-2 gap-4 mt-8">
+                  <Skeleton className="h-32 rounded-2xl" />
+                  <Skeleton className="h-32 rounded-2xl" />
+                </div>
+              </div>
+            )}
+
+            {!isLoading && !response && !error && (
+              <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-white/50 border border-dashed border-gray-200 rounded-3xl text-gray-400">
+                <Sparkles className="w-12 h-12 mb-4 opacity-20" />
+                <p>Ready to analyze! Click the button to get AI insights.</p>
+              </div>
+            )}
+
+            {response && !isLoading && (
+              <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+                {/* Assessment Card */}
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-50 rounded-xl">
+                      <CheckCircle2 className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Style Assessment</h3>
+                  </div>
+                  <div className="prose prose-sm md:prose-base max-w-none text-gray-600">
+                    <p className="leading-relaxed">
+                      {response.styleAssessment}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Grid for details */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-blue-50 rounded-xl">
+                        <Sparkles className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <h3 className="text-base font-bold text-gray-900">Color & Review</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed font-medium">
+                      {response.colorCompositionAnalysis}
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-pink-50 rounded-xl">
+                        <Sparkles className="w-5 h-5 text-pink-600" />
+                      </div>
+                      <h3 className="text-base font-bold text-gray-900">Styling Tips</h3>
+                    </div>
+                    <ul className="space-y-4 text-sm text-gray-600">
+                      <li className="flex flex-col gap-1">
+                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-pink-600">Accessory</span>
+                        <span className="font-medium text-gray-800">{response.stylingRecommendations.accessory}</span>
+                      </li>
+                      <li className="flex flex-col gap-1">
+                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-purple-600">Why It Works</span>
+                        <span>{response.stylingRecommendations.reasoning}</span>
+                      </li>
+                      <li className="flex flex-col gap-1">
+                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-blue-600">Alternative Look</span>
+                        <span>{response.stylingRecommendations.alternativeStyling}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

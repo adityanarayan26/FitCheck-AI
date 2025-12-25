@@ -7,20 +7,21 @@ const SYSTEM_PROMPT = VirtualTryOnPrompt;
 
 const GENERATION_CONFIG = {
   temperature: 0.6,
-  topP: 1,
-  topK: 1,
-  maxOutputTokens: 8192,
-  responseModalities: ['IMAGE'],
+  topP: 0.9,
+  topK: 40,
+  maxOutputTokens: 2048,
+  responseModalities: ["image"],
 };
 
-const MODEL_NAME = "gemini-2.5-flash-image-preview";
+// Use the correct image generation model found in the list
+const MODEL_NAME = "gemini-3-pro-image-preview";
 
 // --- API ROUTE ---
 export async function POST(req) {
-  const apiKey = process.env.GEMINI_IMAGE_MODEL;
+  const apiKey = process.env.NEW_GEMINI_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "GEMINI_APIKEY environment variable is not set." },
+      { error: "NEW_GEMINI_KEY environment variable is not set." },
       { status: 500 }
     );
   }
@@ -48,12 +49,15 @@ export async function POST(req) {
       contents: [{ role: "user", parts: promptParts }],
       generationConfig: GENERATION_CONFIG,
     });
-    
+
     const generatedImagePart = result?.response?.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
 
     if (!generatedImagePart) {
+      const blockReason = result?.response?.candidates?.[0]?.finishReason;
+      const safetyRatings = result?.response?.candidates?.[0]?.safetyRatings;
+      console.error("Image generation failed. Block Reason:", blockReason, "Safety Ratings:", safetyRatings);
       return NextResponse.json(
-        { error: "Image generation failed. The model did not return an image." },
+        { error: `Image generation failed. The model did not return an image. Reason: ${blockReason}` },
         { status: 500 }
       );
     }
@@ -66,17 +70,16 @@ export async function POST(req) {
 
   } catch (error) {
     console.error("Error in Gemini API route:", error);
-    
-    // Improved: Specifically check for rate limiting (429) errors
-    if (error.message && error.message.includes("429")) {
-        return NextResponse.json(
-            { error: "The service is currently busy due to high demand. Please try again in a minute." },
-            { status: 429 }
-        );
+
+    if (error.message && (error.message.includes("429") || /quota/i.test(error.message))) {
+      return NextResponse.json(
+        { error: "API quota exceeded. Please try again later." },
+        { status: 429 }
+      );
     }
-    
+
     return NextResponse.json(
-      { error: "An internal server error occurred while generating the image." },
+      { error: error.message || "An internal server error occurred while generating the image." },
       { status: 500 }
     );
   }

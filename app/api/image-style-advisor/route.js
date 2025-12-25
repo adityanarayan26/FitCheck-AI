@@ -7,23 +7,24 @@ const SYSTEM_PROMPT = Prompt;
 
 const GENERATION_CONFIG = {
   temperature: 0.7,
-  topP: 1,
-  topK: 1,
-  maxOutputTokens: 8192,
+  topP: 0.9,
+  topK: 40,
+  maxOutputTokens: 1024, // Reduced for token efficiency
   responseMimeType: "application/json",
 };
 
+// Use stable model versions
 const MODELS = {
-  primary: "gemini-1.5-pro-latest",
-  fallback: "gemini-1.5-flash-latest",
+  primary: "gemini-2.0-flash",
+  fallback: "gemini-1.5-flash",
 };
 
 // --- API ROUTE ---
 export async function POST(req) {
-  const apiKey = process.env.GEMINI_APIKEY;
+  const apiKey = process.env.NEW_GEMINI_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "GEMINI_APIKEY environment variable is not set." },
+      { error: "NEW_GEMINI_KEY environment variable is not set." },
       { status: 500 }
     );
   }
@@ -48,7 +49,7 @@ export async function POST(req) {
     };
 
     const textPart = {
-        text: SYSTEM_PROMPT
+      text: SYSTEM_PROMPT
     }
 
     let result;
@@ -66,8 +67,8 @@ export async function POST(req) {
     }
 
     const responseText = result.response.text();
-    
-    // **THE FIX:** Clean the response string before parsing
+
+    // Clean the response string before parsing
     const cleanedResponseText = responseText.replace(/```json/g, "").replace(/```/g, "");
 
     let jsonData;

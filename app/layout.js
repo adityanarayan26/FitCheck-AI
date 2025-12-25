@@ -23,12 +23,12 @@ export default function RootLayout({ children }) {
       <body
         className={`${LausanneFont.variable}  antialiased`}
       >
-        <Stairs>
+        {/* <Stairs> */}
  <AuthProvider>
 
         {children}
  </AuthProvider>
-        </Stairs>
+        {/* </Stairs> */}
       </body>
     </html>
   );
