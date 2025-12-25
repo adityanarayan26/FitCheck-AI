@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { VirtualTryOnPrompt } from "@/app/(components)/VirtualTryOnPrompt";
+import { ajVirtualTryOn } from "@/lib/arcjet";
 
 // --- CONFIGURATION ---
 const SYSTEM_PROMPT = VirtualTryOnPrompt;
@@ -18,6 +19,19 @@ const MODEL_NAME = "gemini-3-pro-image-preview";
 
 // --- API ROUTE ---
 export async function POST(req) {
+  // Rate limiting: 3 images per 12 hours
+  const decision = await ajVirtualTryOn.protect(req);
+
+  if (decision.isDenied()) {
+    return NextResponse.json(
+      {
+        error: "Rate limit exceeded. You can generate up to 3 images every 12 hours.",
+        rateLimited: true,
+      },
+      { status: 429 }
+    );
+  }
+
   const apiKey = process.env.NEW_GEMINI_KEY;
   if (!apiKey) {
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { Prompt } from "@/app/(components)/Prompt";
+import { ajImageAdvisor } from "@/lib/arcjet";
 
 // --- CONFIGURATION ---
 const SYSTEM_PROMPT = Prompt;
@@ -16,11 +17,25 @@ const GENERATION_CONFIG = {
 // Use stable model versions
 const MODELS = {
   primary: "gemini-2.0-flash",
-  fallback: "gemini-1.5-flash",
+  fallback: "gemini-2.0-flash-lite",
 };
 
 // --- API ROUTE ---
 export async function POST(req) {
+  // Rate limiting: 2-minute cooldown (1 request per 2 minutes)
+  const decision = await ajImageAdvisor.protect(req);
+
+  if (decision.isDenied()) {
+    return NextResponse.json(
+      {
+        error: "Please wait 2 minutes before requesting another style analysis.",
+        rateLimited: true,
+        cooldown: 120,
+      },
+      { status: 429 }
+    );
+  }
+
   const apiKey = process.env.NEW_GEMINI_KEY;
   if (!apiKey) {
     return NextResponse.json(

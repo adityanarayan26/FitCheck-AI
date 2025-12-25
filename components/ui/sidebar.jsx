@@ -48,8 +48,9 @@ export function DashboardSidebar({ activeComponent, setActiveComponent }) {
       )}
       onMouseEnter={() => setIsCollapsed(false)}
       onMouseLeave={() => {
-        setIsCollapsed(true);
-        setShowDropdown(false);
+        if (!showDropdown) {
+          setIsCollapsed(true);
+        }
       }}
     >
       {/* Sidebar Container with Glassmorphism */}

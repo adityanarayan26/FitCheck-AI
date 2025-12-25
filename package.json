@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@arcjet/next": "^1.0.0-beta.15",
     "@google/generative-ai": "^0.24.1",
     "@gsap/react": "^2.1.2",
     "@paper-design/shaders-react": "^0.0.52",

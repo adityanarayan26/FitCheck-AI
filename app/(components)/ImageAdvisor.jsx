@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn } from "lucide-react";
+import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn, Clock } from "lucide-react";
 import axios from "axios";
 import FileUploader from "./FileUploader";
 import {
@@ -12,12 +12,61 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
+// Format seconds to MM:SS
+const formatCountdown = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function ImageAdvisor() {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [response, setResponse] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const countdownIntervalRef = useRef(null);
+
+  // Check for existing rate limit on mount
+  useEffect(() => {
+    const storedLimit = localStorage.getItem("imageAdvisorRateLimit");
+    if (storedLimit) {
+      const endTime = parseInt(storedLimit, 10);
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      if (remaining > 0) {
+        setIsRateLimited(true);
+        setRateLimitCountdown(remaining);
+        startCountdown(remaining);
+      } else {
+        localStorage.removeItem("imageAdvisorRateLimit");
+      }
+    }
+    return () => clearInterval(countdownIntervalRef.current);
+  }, []);
+
+  const startCountdown = (duration) => {
+    setIsRateLimited(true);
+    setRateLimitCountdown(duration);
+
+    // Store end time in localStorage
+    const endTime = Date.now() + (duration * 1000);
+    localStorage.setItem("imageAdvisorRateLimit", endTime.toString());
+
+    clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = setInterval(() => {
+      setRateLimitCountdown(prevTime => {
+        if (prevTime <= 1) {
+          clearInterval(countdownIntervalRef.current);
+          setIsRateLimited(false);
+          localStorage.removeItem("imageAdvisorRateLimit");
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
 
   const handleFileChange = (file) => {
     if (file) {
@@ -52,7 +101,13 @@ export default function ImageAdvisor() {
         });
         setResponse(res.data.data);
       } catch (err) {
-        setError(err.response?.data?.error || "Failed to get advice. Please try again.");
+        // Handle Arcjet rate limit (429)
+        if (err.response?.status === 429 && err.response?.data?.rateLimited) {
+          startCountdown(2 * 60); // 2 minutes in seconds
+          setError("Please wait 2 minutes before analyzing another outfit.");
+        } else {
+          setError(err.response?.data?.error || "Failed to get advice. Please try again.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -142,13 +197,19 @@ export default function ImageAdvisor() {
                 </div>
               </div>
 
-              {!response && !isLoading && (
+              {!response && !isLoading && !isRateLimited && (
                 <Button
                   onClick={handleSubmit}
                   className="w-full mt-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md hover:shadow-lg transition-all"
                 >
                   <Wand2 className="w-4 h-4 mr-2" />
                   Analyze Style
+                </Button>
+              )}
+              {!response && !isLoading && isRateLimited && (
+                <Button disabled className="w-full mt-3 bg-gray-400 text-white">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Wait {formatCountdown(rateLimitCountdown)}
                 </Button>
               )}
               {isLoading && (

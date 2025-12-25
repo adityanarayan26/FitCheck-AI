@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Shirt, Wand2, ArrowRight, Sparkles, Download, ZoomIn, RefreshCw, Trash2 } from "lucide-react";
+import { User, Shirt, Wand2, ArrowRight, Sparkles, Download, ZoomIn, RefreshCw, Trash2, Clock } from "lucide-react";
 import axios from "axios";
 import FileUploader from "./FileUploader";
 import {
@@ -20,52 +20,56 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
   reader.onerror = error => reject(error);
 });
 
+// Format seconds to HH:MM:SS
+const formatCountdown = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function VirtualTryOn() {
   const [modelImage, setModelImage] = useState({ file: null, preview: null, data: null, type: null });
   const [garmentImage, setGarmentImage] = useState({ file: null, preview: null, data: null, type: null });
   const [generatedImage, setGeneratedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isCoolingDown, setIsCoolingDown] = useState(false);
-  const [cooldownTime, setCooldownTime] = useState(0);
-  const cooldownIntervalRef = useRef(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const countdownIntervalRef = useRef(null);
 
+  // Check for existing rate limit on mount
   useEffect(() => {
-    return () => clearInterval(cooldownIntervalRef.current);
+    const storedLimit = localStorage.getItem("virtualTryOnRateLimit");
+    if (storedLimit) {
+      const endTime = parseInt(storedLimit, 10);
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      if (remaining > 0) {
+        setIsRateLimited(true);
+        setRateLimitCountdown(remaining);
+        startCountdown(remaining);
+      } else {
+        localStorage.removeItem("virtualTryOnRateLimit");
+      }
+    }
+    return () => clearInterval(countdownIntervalRef.current);
   }, []);
 
-  const checkUsageLimit = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const usageData = localStorage.getItem("virtualTryOnUsage");
+  const startCountdown = (duration) => {
+    setIsRateLimited(true);
+    setRateLimitCountdown(duration);
 
-    if (usageData) {
-      const { count, date } = JSON.parse(usageData);
+    // Store end time in localStorage
+    const endTime = Date.now() + (duration * 1000);
+    localStorage.setItem("virtualTryOnRateLimit", endTime.toString());
 
-      if (date !== today) {
-        localStorage.setItem("virtualTryOnUsage", JSON.stringify({ count: 1, date: today }));
-        return true;
-      } else {
-        if (count >= 3) {
-          setError("Daily limit reached! You can generate 3 try-ons per day.");
-          return false;
-        }
-        localStorage.setItem("virtualTryOnUsage", JSON.stringify({ count: count + 1, date: today }));
-        return true;
-      }
-    } else {
-      localStorage.setItem("virtualTryOnUsage", JSON.stringify({ count: 1, date: today }));
-      return true;
-    }
-  };
-
-  const startCooldown = (duration) => {
-    setIsCoolingDown(true);
-    setCooldownTime(duration);
-    cooldownIntervalRef.current = setInterval(() => {
-      setCooldownTime(prevTime => {
+    clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = setInterval(() => {
+      setRateLimitCountdown(prevTime => {
         if (prevTime <= 1) {
-          clearInterval(cooldownIntervalRef.current);
-          setIsCoolingDown(false);
+          clearInterval(countdownIntervalRef.current);
+          setIsRateLimited(false);
+          localStorage.removeItem("virtualTryOnRateLimit");
           return 0;
         }
         return prevTime - 1;
@@ -101,10 +105,6 @@ export default function VirtualTryOn() {
       return;
     }
 
-    // Usage Check
-    const allowed = checkUsageLimit();
-    if (!allowed) return;
-
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
@@ -118,17 +118,19 @@ export default function VirtualTryOn() {
       if (res.data.success) {
         const { data, mimeType } = res.data.data;
         setGeneratedImage(`data:${mimeType};base64,${data}`);
-        setIsLoading(false);
-        startCooldown(10);
       } else {
         setError(res.data.error || "An unknown error occurred.");
-        setIsLoading(false);
-        startCooldown(5);
       }
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to generate image. Please try again later.");
+      // Handle Arcjet rate limit (429)
+      if (err.response?.status === 429 && err.response?.data?.rateLimited) {
+        startCountdown(12 * 60 * 60); // 12 hours in seconds
+        setError("Daily limit reached! You can try on 3 outfits every 12 hours.");
+      } else {
+        setError(err.response?.data?.error || "Failed to generate image. Please try again later.");
+      }
+    } finally {
       setIsLoading(false);
-      startCooldown(10);
     }
   };
 
@@ -199,16 +201,19 @@ export default function VirtualTryOn() {
 
             <Button
               onClick={handleSubmit}
-              disabled={!modelImage.file || !garmentImage.file || isLoading || isCoolingDown}
-              className="w-full mt-8 py-6 text-md font-semibold rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg shadow-pink-200 transition-all"
+              disabled={!modelImage.file || !garmentImage.file || isLoading || isRateLimited}
+              className="w-full mt-8 py-6 text-md font-semibold rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg shadow-pink-200 transition-all disabled:opacity-60"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                   Generating...
                 </div>
-              ) : isCoolingDown ? (
-                <span className="text-sm">Wait {cooldownTime}s</span>
+              ) : isRateLimited ? (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm">Available in {formatCountdown(rateLimitCountdown)}</span>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Wand2 className="h-4 w-4" />
