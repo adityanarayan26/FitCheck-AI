@@ -1,14 +1,13 @@
 import React from 'react'
-
-import SignUpForm from '@/app/(components)/SignUpForm'
+import SignUpForm from '../(components)/SignUpForm'
+import AuthLayout from '../(components)/AuthLayout'
 
 const page = () => {
-  return (
-    <div className='h-screen w-full flex justify-center items-center' style={{backgroundImage: "url('/loginBG.jpg')", backgroundSize: 'cover', backgroundPosition: 'center'}}>
-      <SignUpForm/>
-    </div>
-  )
+    return (
+        <AuthLayout>
+            <SignUpForm />
+        </AuthLayout>
+    )
 }
 
 export default page
-

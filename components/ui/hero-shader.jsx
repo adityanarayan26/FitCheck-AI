@@ -29,7 +29,7 @@ export function ShaderBackground({
   return (
     <div
       ref={containerRef}
-      className="min-h-[650px] w-full relative overflow-hidden">
+      className="h-full w-full relative overflow-hidden">
       {/* SVG Filters */}
       <svg className="absolute inset-0 w-0 h-0">
         <defs>
