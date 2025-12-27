@@ -50,6 +50,8 @@ export function MobileBottomNav({ activeComponent, setActiveComponent }) {
                 : "hover:bg-gray-50"
             )}
           >
+
+
             <item.icon
               className={cn(
                 "h-5 w-5 transition-colors",
