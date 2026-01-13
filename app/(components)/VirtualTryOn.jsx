@@ -174,7 +174,7 @@ export default function VirtualTryOn() {
       {!imageState.preview ? (
         <button
           onClick={() => inputRef.current?.click()}
-          className="flex-1 min-h-[140px] border-2 border-dashed border-zinc-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer group"
+          className="flex-1 min-h-[120px] md:min-h-[140px] border-2 border-dashed border-zinc-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer group"
         >
           <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center group-hover:scale-105 transition-transform">
             <Upload className="w-4 h-4 text-zinc-400" />
@@ -184,7 +184,7 @@ export default function VirtualTryOn() {
       ) : (
         <div
           onClick={() => inputRef.current?.click()}
-          className="flex-1 min-h-[140px] relative rounded-lg overflow-hidden bg-zinc-100 cursor-pointer group border border-zinc-200"
+          className="flex-1 min-h-[120px] md:min-h-[140px] relative rounded-lg overflow-hidden bg-zinc-100 cursor-pointer group border border-zinc-200"
         >
           <img src={imageState.preview} alt={label} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -196,9 +196,9 @@ export default function VirtualTryOn() {
   );
 
   return (
-    <div className="h-full w-full flex overflow-hidden">
+    <div className="h-full w-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
       {/* Settings Panel - Left Side */}
-      <div className="w-80 border-r border-zinc-200 bg-white flex flex-col shrink-0 p-4 overflow-y-auto">
+      <div className="w-full md:w-80 h-auto md:h-full border-b md:border-b-0 md:border-r border-zinc-200 bg-white flex flex-col shrink-0 p-4 overflow-visible md:overflow-visible">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-zinc-900">Configuration</h2>
           {(modelImage.file || garmentImage.file || generatedImage) && (

@@ -37,32 +37,27 @@ const navItems = [
 // Mobile Bottom Navigation
 export function MobileBottomNav({ activeComponent, setActiveComponent }) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 safe-area-pb">
-      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-200 pb-safe">
+      <div className="flex items-center justify-around h-16 w-full px-2">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveComponent(item.id)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-xl transition-all",
+              "flex flex-col items-center justify-center gap-1 py-1 px-4 rounded-xl transition-all min-w-[64px]",
               activeComponent === item.id
-                ? "bg-gray-100"
-                : "hover:bg-gray-50"
+                ? "bg-brand-lime text-black shadow-sm"
+                : "text-zinc-400 hover:bg-zinc-50 hover:text-zinc-900"
             )}
           >
-
-
             <item.icon
               className={cn(
                 "h-5 w-5 transition-colors",
-                activeComponent === item.id ? item.color : "text-gray-400"
+                activeComponent === item.id ? "text-black" : "text-zinc-400"
               )}
             />
             <span
-              className={cn(
-                "text-[10px] font-medium transition-colors",
-                activeComponent === item.id ? "text-gray-900" : "text-gray-400"
-              )}
+              className="text-[10px] font-medium"
             >
               {item.label.split(" ")[0]}
             </span>

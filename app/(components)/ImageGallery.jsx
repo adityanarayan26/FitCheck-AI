@@ -70,7 +70,7 @@ export default function ImageGallery() {
     return (
         <div className="flex-1 overflow-hidden flex flex-col h-full bg-zinc-50">
             {/* Header Area */}
-            <div className="p-6 md:px-8 md:pt-8 md:pb-4 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="p-4 md:px-8 md:pt-8 md:pb-4 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-zinc-900">
                         My Gallery
@@ -101,7 +101,7 @@ export default function ImageGallery() {
 
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-8 pb-8">
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
                 {/* Loading State */}
                 {isLoading && (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">

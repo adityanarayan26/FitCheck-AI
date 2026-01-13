@@ -148,9 +148,9 @@ export default function ImageAdvisor() {
   };
 
   return (
-    <div className="h-full w-full flex overflow-hidden">
+    <div className="h-full w-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
       {/* Quick sidebar for actions - Left Side */}
-      <div className="w-80 border-r border-zinc-200 bg-white flex flex-col shrink-0">
+      <div className="w-full md:w-80 h-auto md:h-full border-b md:border-b-0 md:border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-visible md:overflow-visible">
         <div className="p-4 border-b border-zinc-100">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold text-zinc-900">Input</h2>
@@ -172,7 +172,7 @@ export default function ImageAdvisor() {
           {!imagePreview ? (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full aspect-[3/4] rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center gap-2 hover:bg-zinc-100 hover:border-zinc-300 transition-all group"
+              className="w-full aspect-square md:aspect-[3/4] rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center gap-2 hover:bg-zinc-100 hover:border-zinc-300 transition-all group"
             >
               <div className="h-10 w-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                 <Upload className="w-5 h-5 text-zinc-400" />
@@ -183,7 +183,7 @@ export default function ImageAdvisor() {
               </div>
             </button>
           ) : (
-            <div className="w-full aspect-[3/4] relative rounded-lg overflow-hidden bg-zinc-100 group border border-zinc-200">
+            <div className="w-full aspect-square md:aspect-[3/4] relative rounded-lg overflow-hidden bg-zinc-100 group border border-zinc-200">
               <img src={imagePreview} alt="Outfit" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
@@ -194,10 +194,10 @@ export default function ImageAdvisor() {
           )}
 
           <div className="mt-4 space-y-2">
-            {image && !response && !isLoading && (
+            {!response && !isLoading && (
               <Button
                 onClick={handleSubmit}
-                disabled={isRateLimited}
+                disabled={!image || isRateLimited}
                 className="w-full bg-brand-lime text-black hover:bg-brand-lime/90 hover:shadow-lg transition-all font-medium"
               >
                 {isRateLimited ? (
@@ -228,7 +228,7 @@ export default function ImageAdvisor() {
           </div>
         </div>
 
-        <div className="p-4 flex-1 overflow-y-auto">
+        <div className="p-4 shrink-0 md:flex-1 md:overflow-y-auto">
           <div className="text-xs text-zinc-500 leading-relaxed">
             <p className="font-medium text-zinc-900 mb-1">How it works</p>
             <p>Upload a clear photo of your outfit. Our AI will analyze color harmony, style coherence, and provide actionable tips.</p>
