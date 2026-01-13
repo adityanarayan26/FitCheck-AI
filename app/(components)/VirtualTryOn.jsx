@@ -1,19 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { User, Shirt, Wand2, ArrowRight, Sparkles, Download, ZoomIn, RefreshCw, Trash2, Clock, Save, Check } from "lucide-react";
+import { User, Shirt, Wand2, Sparkles, Download, Clock, Save, Check, Upload } from "lucide-react";
 import axios from "axios";
-import FileUploader from "./FileUploader";
 import { useAuth } from "@/context/AuthContext";
 import { saveImage } from "@/lib/firestoreService";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
 
 const toBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -22,7 +13,6 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
   reader.onerror = error => reject(error);
 });
 
-// Format seconds to HH:MM:SS
 const formatCountdown = (seconds) => {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -42,8 +32,9 @@ export default function VirtualTryOn() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const countdownIntervalRef = useRef(null);
+  const modelInputRef = useRef(null);
+  const garmentInputRef = useRef(null);
 
-  // Check for existing rate limit on mount
   useEffect(() => {
     const storedLimit = localStorage.getItem("virtualTryOnRateLimit");
     if (storedLimit) {
@@ -63,11 +54,8 @@ export default function VirtualTryOn() {
   const startCountdown = (duration) => {
     setIsRateLimited(true);
     setRateLimitCountdown(duration);
-
-    // Store end time in localStorage
     const endTime = Date.now() + (duration * 1000);
     localStorage.setItem("virtualTryOnRateLimit", endTime.toString());
-
     clearInterval(countdownIntervalRef.current);
     countdownIntervalRef.current = setInterval(() => {
       setRateLimitCountdown(prevTime => {
@@ -82,14 +70,16 @@ export default function VirtualTryOn() {
     }, 1000);
   };
 
-  const handleImageChange = (file, setImageState) => {
+  const handleImageChange = async (file, setImageState) => {
     if (file) {
       const preview = URL.createObjectURL(file);
-      toBase64(file).then(data => {
+      try {
+        const data = await toBase64(file);
         setImageState({ file, preview, data, type: file.type });
-      }).catch(err => {
+        setError(null);
+      } catch (err) {
         setError("Could not process the selected file.");
-      });
+      }
     }
   };
 
@@ -106,20 +96,19 @@ export default function VirtualTryOn() {
 
   const handleSubmit = async () => {
     if (!modelImage.data || !garmentImage.data) {
-      setError("Please upload both a model and a garment image.");
+      setError("Please upload both images.");
       return;
     }
-
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
+    setIsSaved(false);
 
     try {
       const res = await axios.post("/api/ai-virtual-tryon", {
         modelImage: { data: modelImage.data, type: modelImage.type },
         garmentImage: { data: garmentImage.data, type: garmentImage.type },
       });
-
       if (res.data.success) {
         const { data, mimeType } = res.data.data;
         setGeneratedImage(`data:${mimeType};base64,${data}`);
@@ -127,12 +116,11 @@ export default function VirtualTryOn() {
         setError(res.data.error || "An unknown error occurred.");
       }
     } catch (err) {
-      // Handle Arcjet rate limit (429)
       if (err.response?.status === 429 && err.response?.data?.rateLimited) {
-        startCountdown(12 * 60 * 60); // 12 hours in seconds
-        setError("Daily limit reached! You can try on 3 outfits every 12 hours.");
+        startCountdown(12 * 60 * 60);
+        setError("Daily limit reached! Try again in 12 hours.");
       } else {
-        setError(err.response?.data?.error || "Failed to generate image. Please try again later.");
+        setError(err.response?.data?.error || "Failed to generate. Please try again.");
       }
     } finally {
       setIsLoading(false);
@@ -141,22 +129,17 @@ export default function VirtualTryOn() {
 
   const handleSaveToGallery = async () => {
     if (!generatedImage || !user?.uid) return;
-
     setIsSaving(true);
     try {
-      // Upload to Cloudinary
       const uploadRes = await fetch("/api/upload-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageData: generatedImage }),
       });
       const uploadData = await uploadRes.json();
-
       if (!uploadRes.ok || !uploadData.url) {
         throw new Error(uploadData.error || "Failed to upload image");
       }
-
-      // Save Cloudinary URL to Firestore
       await saveImage(user.uid, uploadData.url, "virtualTryon");
       setIsSaved(true);
     } catch (err) {
@@ -167,178 +150,144 @@ export default function VirtualTryOn() {
     }
   };
 
-  // Helper to render compact preview
-  const RenderCompactPreview = ({ imageState, setImageState, label, icon: Icon }) => (
-    <div className="flex flex-col gap-3">
-      <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-        <Icon className="w-4 h-4 text-gray-500" /> {label}
-      </label>
-      {imageState.preview ? (
-        <div className="relative group w-32 h-40 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 shadow-sm shrink-0">
-          <img src={imageState.preview} alt={label} className="w-full h-full object-cover" />
-          <button
-            onClick={() => setImageState({ file: null, preview: null, data: null, type: null })}
-            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
+  const handleReset = () => {
+    setModelImage({ file: null, preview: null, data: null, type: null });
+    setGarmentImage({ file: null, preview: null, data: null, type: null });
+    setGeneratedImage(null);
+    setError(null);
+    setIsSaved(false);
+  };
+
+  const ImageUploadCard = ({ label, icon: Icon, imageState, setImageState, inputRef }) => (
+    <div className="flex-1 flex flex-col">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4 text-zinc-500" />
+        <span className="text-xs font-semibold text-zinc-700">{label}</span>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => handleImageChange(e.target.files?.[0], setImageState)}
+        className="hidden"
+      />
+      {!imageState.preview ? (
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 min-h-[140px] border-2 border-dashed border-zinc-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer group"
+        >
+          <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <Upload className="w-4 h-4 text-zinc-400" />
+          </div>
+          <span className="text-xs text-zinc-500 font-medium">Click to Upload</span>
+        </button>
       ) : (
-        <div className="w-full">
-          <FileUploader
-            onFileChange={(file) => handleImageChange(file, setImageState)}
-            title={label}
-            description="Upload Image"
-          />
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 min-h-[140px] relative rounded-lg overflow-hidden bg-zinc-100 cursor-pointer group border border-zinc-200"
+        >
+          <img src={imageState.preview} alt={label} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <span className="text-white text-xs font-medium">Change</span>
+          </div>
         </div>
       )}
     </div>
   );
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6 md:mb-8">
-        <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400">
-            Virtual Try-On
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            See how outfits look on you instantly
-          </p>
+    <div className="h-full w-full flex overflow-hidden">
+      {/* Settings Panel - Left Side */}
+      <div className="w-80 border-r border-zinc-200 bg-white flex flex-col shrink-0 p-4 overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-zinc-900">Configuration</h2>
+          {(modelImage.file || garmentImage.file || generatedImage) && (
+            <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 text-xs text-zinc-500 hover:text-zinc-900">
+              Reset
+            </Button>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-0 flex flex-col gap-4">
+          <ImageUploadCard
+            label="Model Photo"
+            icon={User}
+            imageState={modelImage}
+            setImageState={setModelImage}
+            inputRef={modelInputRef}
+          />
+
+          <div className="h-px bg-zinc-100 w-full" />
+
+          <ImageUploadCard
+            label="Garment Image"
+            icon={Shirt}
+            imageState={garmentImage}
+            setImageState={setGarmentImage}
+            inputRef={garmentInputRef}
+          />
+
+          <Button
+            onClick={handleSubmit}
+            disabled={!modelImage.file || !garmentImage.file || isLoading || isRateLimited}
+            className="mt-4 w-full h-10 bg-brand-lime text-black hover:bg-brand-lime/90 font-medium shadow-sm transition-all hover:shadow-md"
+          >
+            {isLoading ? (
+              <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" /> Processing...</>
+            ) : isRateLimited ? (
+              <><Clock className="w-4 h-4 mr-2" /> Wait {formatCountdown(rateLimitCountdown)}</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" /> Try On Now</>
+            )}
+          </Button>
+
+          {error && (
+            <div className="text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 mt-2">
+              {error}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
-        {/* Left Col: Controls & Inputs */}
-        <div className="lg:col-span-4 space-y-4 md:space-y-6">
-          <div className="bg-white/80 backdrop-blur-sm p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-lg shadow-fuchsia-100/50 border border-fuchsia-100/50">
-            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-4 md:mb-6">Configuration</h3>
-
-            <div className="space-y-6">
-              <RenderCompactPreview
-                imageState={modelImage}
-                setImageState={setModelImage}
-                label="Your Photo"
-                icon={User}
-              />
-
-              <div className="h-px bg-gray-100" />
-
-              <RenderCompactPreview
-                imageState={garmentImage}
-                setImageState={setGarmentImage}
-                label="Garment"
-                icon={Shirt}
+      {/* Main Preview Area */}
+      <div className="flex-1 bg-zinc-50 flex flex-col relative overflow-hidden">
+        {!generatedImage ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-zinc-400">
+            <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4">
+              {isLoading ? (
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
+              ) : (
+                <Sparkles className="w-8 h-8 text-zinc-300" />
+              )}
+            </div>
+            <h3 className="text-zinc-900 font-medium mb-1">
+              {isLoading ? "Generating Try-On..." : "Virtual Fitting Room"}
+            </h3>
+            <p className="text-sm max-w-sm text-center">
+              {isLoading ? "This may take 15-30 seconds. We're fitting the garment naturally." : "Upload your photo and a garment to see how it fits instantly."}
+            </p>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10">
+            <div className="relative h-full max-h-[80vh] w-auto aspect-[3/4] rounded-lg shadow-lg border-4 border-white bg-white overflow-hidden">
+              <img
+                src={generatedImage}
+                alt="Result"
+                className="w-full h-full object-contain"
               />
             </div>
 
-            <Button
-              onClick={handleSubmit}
-              disabled={!modelImage.file || !garmentImage.file || isLoading || isRateLimited}
-              className="w-full mt-8 py-6 text-md font-semibold rounded-xl bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 hover:from-fuchsia-600 hover:via-pink-600 hover:to-amber-500 text-white shadow-lg shadow-fuchsia-200/50 transition-all disabled:opacity-60"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  Generating...
-                </div>
-              ) : isRateLimited ? (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm">Available in {formatCountdown(rateLimitCountdown)}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Wand2 className="h-4 w-4" />
-                  Try On Now
-                </div>
-              )}
-            </Button>
-            {error && <p className="text-xs text-red-500 mt-3 bg-red-50 p-2 rounded-lg">{error}</p>}
+            <div className="flex items-center gap-3 mt-6">
+              <Button onClick={handleDownload} variant="outline" className="border-zinc-200 hover:bg-zinc-50 text-zinc-900">
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+              <Button onClick={handleSaveToGallery} disabled={isSaving || isSaved} className="bg-brand-lime text-black hover:bg-brand-lime/90 font-medium shadow-sm">
+                {isSaving ? "Saving..." : isSaved ? <><Check className="w-4 h-4 mr-2" /> Saved</> : <><Save className="w-4 h-4 mr-2" /> Save to Gallery</>}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        {/* Right Col: Result Area */}
-        <div className="lg:col-span-8">
-          <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-gray-100 h-full min-h-[500px] flex flex-col items-center justify-center relative bg-grid-slate-50">
-
-            {/* Placeholder */}
-            {!isLoading && !generatedImage && (
-              <div className="text-center text-gray-400 max-w-sm">
-                <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="w-8 h-8 text-pink-300" />
-                </div>
-                <h3 className="text-gray-900 font-semibold text-lg mb-2">Ready to Create Magic</h3>
-                <p className="text-sm">Upload your photo and a garment to start the virtual try-on experience.</p>
-              </div>
-            )}
-
-            {/* Loading */}
-            {isLoading && (
-              <div className="text-center">
-                <div className="mb-8 relative">
-                  <div className="h-24 w-24 animate-spin rounded-full border-4 border-pink-100 border-t-pink-500 mx-auto"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Sparkles className="w-8 h-8 text-pink-500 animate-pulse" />
-                  </div>
-                </div>
-                <p className="text-gray-600 font-medium">Synthesizing your look...</p>
-                <p className="text-gray-400 text-sm mt-1">This may take a few seconds</p>
-              </div>
-            )}
-
-            {/* Result Image */}
-            {!isLoading && generatedImage && (
-              <div className="w-full max-w-md animate-in zoom-in-50 duration-500">
-                <div className="relative group rounded-2xl overflow-hidden shadow-2xl border-4 border-white aspect-[3/4] bg-gray-100 cursor-pointer">
-                  <img src={generatedImage} alt="Generated Try-On" className="w-full h-full object-cover" />
-
-                  {/* Hover Actions */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4 backdrop-blur-sm">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="secondary" className="rounded-full h-12 w-12 p-0 shadow-lg hover:scale-110 transition-transform">
-                          <ZoomIn className="w-5 h-5" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-transparent border-0 shadow-none flex flex-col items-center justify-center gap-4 focus:outline-none">
-                        <div className="relative rounded-lg overflow-hidden shadow-2xl">
-                          <img
-                            src={generatedImage}
-                            alt="Full Screen Result"
-                            className="max-w-full max-h-[85vh] object-contain bg-white rounded-lg" // Added bg-white for transparent PNGs
-                          />
-                        </div>
-                        <Button onClick={handleDownload} className="bg-white text-gray-900 hover:bg-gray-100 shadow-xl rounded-full px-8">
-                          <Download className="w-4 h-4 mr-2" /> Download Image
-                        </Button>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Button onClick={handleDownload} variant="secondary" className="rounded-full h-12 w-12 p-0 shadow-lg hover:scale-110 transition-transform">
-                      <Download className="w-5 h-5" />
-                    </Button>
-
-                    <Button
-                      onClick={handleSaveToGallery}
-                      disabled={isSaving || isSaved}
-                      variant="secondary"
-                      className="rounded-full h-12 w-12 p-0 shadow-lg hover:scale-110 transition-transform"
-                    >
-                      {isSaving ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-transparent" />
-                      ) : isSaved ? (
-                        <Check className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Save className="w-5 h-5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

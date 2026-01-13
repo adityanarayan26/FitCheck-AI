@@ -75,7 +75,6 @@ export function MobileBottomNav({ activeComponent, setActiveComponent }) {
 
 // Desktop Sidebar
 export function DashboardSidebar({ activeComponent, setActiveComponent }) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
 
@@ -91,107 +90,73 @@ export function DashboardSidebar({ activeComponent, setActiveComponent }) {
     <>
       {/* Desktop Sidebar - Hidden on mobile */}
       <aside
-        className={cn(
-          "hidden md:block fixed left-0 top-0 z-50 h-full transition-all duration-300 ease-out",
-          isCollapsed ? "w-20" : "w-72"
-        )}
-        onMouseEnter={() => setIsCollapsed(false)}
-        onMouseLeave={() => {
-          if (!showDropdown) {
-            setIsCollapsed(true);
-          }
-        }}
+        className="hidden md:block fixed left-0 top-0 z-50 h-full w-72 bg-white border-r border-zinc-200"
       >
-        <div className="h-full flex flex-col glass shadow-float rounded-r-2xl overflow-hidden">
+        <div className="h-full flex flex-col">
 
           {/* Logo Header */}
-          <div className="h-20 flex items-center px-5 border-b border-white/10 shrink-0">
-            <div className="flex items-center gap-4 overflow-hidden">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 via-fuchsia-500 to-amber-400 flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xs">FC</span>
+          <div className="h-14 flex items-center px-6 border-b border-zinc-100 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-brand-lime flex items-center justify-center shadow-sm">
+                <span className="text-black font-bold text-xs">FC</span>
               </div>
-              <div className={cn(
-                "flex flex-col transition-opacity duration-300",
-                isCollapsed ? "opacity-0" : "opacity-100"
-              )}>
-                <span className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                  FitCheck AI
-                </span>
-              </div>
+              <span className="text-sm font-bold text-zinc-900">
+                FitCheck AI
+              </span>
             </div>
           </div>
 
           {/* Navigation */}
-          <div className="flex-1 py-6 px-3 space-y-2 overflow-hidden hover:overflow-y-auto">
+          <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
+            <div className="text-xs font-semibold text-zinc-400 px-2 mb-2 uppercase tracking-wider">
+              Menu
+            </div>
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveComponent(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-4 p-3 rounded-xl transition-all duration-300 group relative",
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group text-sm font-medium",
                   activeComponent === item.id
-                    ? "bg-white/60 shadow-sm"
-                    : "hover:bg-white/40"
+                    ? "bg-brand-lime text-black shadow-sm"
+                    : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                 )}
               >
-                <div className={cn(
-                  "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-                  activeComponent === item.id ? item.bgColor : "bg-gray-100 group-hover:bg-white"
-                )}>
-                  <item.icon className={cn("h-4 w-4", item.color)} />
-                </div>
-
-                <span className={cn(
-                  "font-medium text-sm text-gray-700 whitespace-nowrap transition-opacity duration-300",
-                  isCollapsed ? "opacity-0" : "opacity-100"
-                )}>
-                  {item.label}
-                </span>
-
-                {activeComponent === item.id && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute left-0 w-1 h-8 bg-purple-500 rounded-r-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  />
-                )}
+                <item.icon className={cn(
+                  "h-4 w-4 transition-colors",
+                  activeComponent === item.id ? "text-black" : "text-zinc-400 group-hover:text-zinc-600"
+                )} />
+                <span>{item.label}</span>
               </button>
             ))}
           </div>
 
           {/* User Account Section */}
-          <div className="p-4 border-t border-white/10 bg-white/30 backdrop-blur-md shrink-0">
+          <div className="p-4 border-t border-zinc-100 shrink-0">
             <DropdownMenu open={showDropdown} onOpenChange={setShowDropdown}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start p-0 hover:bg-transparent">
+                <Button variant="ghost" className="w-full justify-start p-2 h-auto hover:bg-zinc-50 rounded-lg">
                   <div className="flex items-center gap-3 w-full overflow-hidden">
-                    <Avatar className="h-8 w-8 border-2 border-white shadow-sm shrink-0">
-                      <AvatarFallback className="bg-gradient-to-tr from-violet-500 to-fuchsia-500 text-white text-xs font-bold">
+                    <Avatar className="h-8 w-8 border border-zinc-200 shrink-0">
+                      <AvatarFallback className="bg-zinc-100 text-zinc-700 text-xs font-bold">
                         {user?.displayName ? user.displayName.substring(0, 2).toUpperCase() : "U"}
                       </AvatarFallback>
                     </Avatar>
 
-                    <div className={cn(
-                      "flex flex-col items-start transition-opacity duration-300 min-w-0",
-                      isCollapsed ? "opacity-0 w-0" : "opacity-100 flex-1"
-                    )}>
-                      <span className="text-xs font-semibold text-gray-800 truncate w-full text-left">
+                    <div className="flex flex-col items-start min-w-0 flex-1">
+                      <span className="text-xs font-medium text-zinc-900 truncate w-full text-left">
                         {user?.displayName || "User"}
                       </span>
-                      <span className="text-[10px] text-gray-500 truncate w-full text-left">
+                      <span className="text-[10px] text-zinc-500 truncate w-full text-left">
                         {user?.email}
                       </span>
                     </div>
 
-                    {!isCollapsed && (
-                      <ChevronsUpDown className="h-3 w-3 text-gray-400 shrink-0" />
-                    )}
+                    <ChevronsUpDown className="h-3 w-3 text-zinc-400 shrink-0" />
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 mb-2 ml-2" align="start" side="right">
+              <DropdownMenuContent className="w-60 mb-2 ml-2" align="start" side="top">
                 <DropdownMenuItem className="text-red-500 focus:text-red-500 cursor-pointer text-xs" onClick={handleSignOut}>
                   Log out
                 </DropdownMenuItem>

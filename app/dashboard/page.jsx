@@ -45,35 +45,30 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className='min-h-screen w-full bg-mesh-gradient relative'>
+    <div className='flex h-screen w-full bg-zinc-50 overflow-hidden'>
       {/* Sidebar */}
       <DashboardSidebar activeComponent={activeComponent} setActiveComponent={setActiveComponent} />
 
-      {/* Main Content Area - Responsive padding */}
-      <main className='px-4 pt-4 pb-24 md:pl-24 md:pr-8 md:pt-4 md:pb-12 min-h-screen transition-all duration-300'>
-        <div className="max-w-7xl mx-auto space-y-4">
-
-          {/* Top Bar - Welcome Text Fixed Right */}
-          <div className="flex justify-end items-center">
-            <div className="text-right">
-              <p className="text-xs md:text-sm font-medium text-gray-600">
-                Welcome back, <span className="text-gray-900">{user?.displayName?.split(' ')[0] || 'Fashionista'}</span>
-              </p>
-              <p className="text-[10px] md:text-xs text-gray-400">
-                {activeComponent === 'imageAdvisor'
-                  ? 'Get personalized style advice for your outfits'
-                  : activeComponent === 'virtualTryon'
-                    ? 'Try on clothes virtually before you buy'
-                    : 'View your saved style analyses and try-ons'
-                }
-              </p>
-            </div>
+      {/* Main Content Area */}
+      <main className='flex-1 flex flex-col h-full relative transition-all duration-300 md:pl-72'>
+        {/* Top Header - Minimal */}
+        <header className="h-14 border-b border-zinc-200 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6 shrink-0 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-zinc-500">Dashboard</span>
+            <span className="text-zinc-300">/</span>
+            <span className="text-sm font-semibold text-zinc-900">
+              {activeComponent === 'imageAdvisor' ? 'Style Advisor' :
+                activeComponent === 'virtualTryon' ? 'Virtual Try-On' : 'Gallery'}
+            </span>
           </div>
-
-          {/* Content Area - Clean Layout */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-2xl md:rounded-3xl border border-white/20 shadow-sm">
-            {renderComponent()}
+          <div className="flex items-center gap-4">
+            {/* Profile info removed */}
           </div>
+        </header>
+
+        {/* Component Area - Fills remaining space */}
+        <div className="flex-1 overflow-hidden relative">
+          {renderComponent()}
         </div>
       </main>
     </div>

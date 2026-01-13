@@ -1,20 +1,11 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Wand2, CheckCircle2, RefreshCw, ZoomIn, Clock, Save, Check } from "lucide-react";
+import { Sparkles, Wand2, RefreshCw, Clock, Save, Check, Upload, Palette, Lightbulb } from "lucide-react";
 import axios from "axios";
-import FileUploader from "./FileUploader";
 import { useAuth } from "@/context/AuthContext";
 import { saveImage } from "@/lib/firestoreService";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
 
-// Format seconds to MM:SS
 const formatCountdown = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -33,8 +24,8 @@ export default function ImageAdvisor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const countdownIntervalRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Check for existing rate limit on mount
   useEffect(() => {
     const storedLimit = localStorage.getItem("imageAdvisorRateLimit");
     if (storedLimit) {
@@ -54,11 +45,8 @@ export default function ImageAdvisor() {
   const startCountdown = (duration) => {
     setIsRateLimited(true);
     setRateLimitCountdown(duration);
-
-    // Store end time in localStorage
     const endTime = Date.now() + (duration * 1000);
     localStorage.setItem("imageAdvisorRateLimit", endTime.toString());
-
     clearInterval(countdownIntervalRef.current);
     countdownIntervalRef.current = setInterval(() => {
       setRateLimitCountdown(prevTime => {
@@ -73,12 +61,14 @@ export default function ImageAdvisor() {
     }, 1000);
   };
 
-  const handleFileChange = (file) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
     if (file) {
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
       setError(null);
       setResponse(null);
+      setIsSaved(false);
     }
   };
 
@@ -87,6 +77,7 @@ export default function ImageAdvisor() {
     setImagePreview(null);
     setResponse(null);
     setError(null);
+    setIsSaved(false);
   };
 
   const handleSubmit = async () => {
@@ -106,9 +97,8 @@ export default function ImageAdvisor() {
         });
         setResponse(res.data.data);
       } catch (err) {
-        // Handle Arcjet rate limit (429)
         if (err.response?.status === 429 && err.response?.data?.rateLimited) {
-          startCountdown(2 * 60); // 2 minutes in seconds
+          startCountdown(2 * 60);
           setError("Please wait 2 minutes before analyzing another outfit.");
         } else {
           setError(err.response?.data?.error || "Failed to get advice. Please try again.");
@@ -125,28 +115,21 @@ export default function ImageAdvisor() {
 
   const handleSaveToGallery = async () => {
     if (!image || !user?.uid) return;
-
     setIsSaving(true);
     try {
-      // Convert image file to base64 data URL
       const reader = new FileReader();
       reader.readAsDataURL(image);
       reader.onload = async () => {
         const base64DataUrl = reader.result;
-
-        // Upload to Cloudinary
         const uploadRes = await fetch("/api/upload-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageData: base64DataUrl }),
         });
         const uploadData = await uploadRes.json();
-
         if (!uploadRes.ok || !uploadData.url) {
           throw new Error(uploadData.error || "Failed to upload image");
         }
-
-        // Save Cloudinary URL to Firestore
         await saveImage(user.uid, uploadData.url, "imageAdvisor", {
           styleAssessment: response?.styleAssessment || null,
         });
@@ -165,218 +148,172 @@ export default function ImageAdvisor() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 md:mb-8">
-        <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500">
-            Style Advisor
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            AI-powered fashion advice for your wardrobe
-          </p>
-        </div>
-        {image && (
-          <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            New Upload
-          </Button>
-        )}
-      </div>
-
-      {!image ? (
-        /* Upload Screen */
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-lg shadow-pink-100/50 border border-pink-100/50 p-6 md:p-12 text-center transition-all duration-500 ease-in-out">
-          <div className="max-w-md mx-auto space-y-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-rose-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-pink-200/30">
-              <Sparkles className="w-10 h-10 text-rose-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">Upload Your Outfit</h2>
-            <p className="text-gray-500">
-              Share a photo of your clothing or complete outfit to receive expert styling tips, color harmony suggestions, and accessory pairings.
-            </p>
-            <FileUploader
-              onFileChange={handleFileChange}
-              title="Click to Upload or Drag & Drop"
-              description="Supports JPG, PNG, WEBP"
-            />
-          </div>
-        </div>
-      ) : (
-        /* Analysis Screen */
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-          {/* Left Sidebar: Image & Controls */}
-          <div className="md:col-span-4 lg:col-span-3 space-y-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3">
-              <div className="relative group overflow-hidden rounded-xl aspect-[3/4] bg-gray-50">
-                <img
-                  src={imagePreview}
-                  alt="Outfit"
-                  className="w-full h-full object-cover"
-                />
-
-                {/* View Image Dialog */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="secondary" className="gap-2 pointer-events-auto shadow-lg">
-                        <ZoomIn className="w-3 h-3" /> View
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-screen-lg p-0 bg-transparent border-0 shadow-none overflow-hidden flex flex-col items-center justify-center h-screen w-screen focus:outline-none" onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <div className="relative w-auto h-auto max-w-[90vw] max-h-[85vh] group">
-                        <img
-                          src={imagePreview}
-                          alt="Full view"
-                          className="w-full h-full object-contain rounded-md shadow-2xl bg-black/50"
-                        />
-                        <DialogClose asChild>
-                          <button className="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors">
-                            <span className="sr-only">Close</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                          </button>
-                        </DialogClose>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-
-              {!response && !isLoading && !isRateLimited && (
-                <Button
-                  onClick={handleSubmit}
-                  className="w-full mt-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md hover:shadow-lg transition-all"
-                >
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Analyze Style
-                </Button>
-              )}
-              {!response && !isLoading && isRateLimited && (
-                <Button disabled className="w-full mt-3 bg-gray-400 text-white">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Wait {formatCountdown(rateLimitCountdown)}
-                </Button>
-              )}
-              {isLoading && (
-                <Button disabled className="w-full mt-3">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                  Analyzing...
-                </Button>
-              )}
-              {response && !isLoading && (
-                <Button
-                  onClick={handleSaveToGallery}
-                  disabled={isSaving || isSaved}
-                  className="w-full mt-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-md hover:shadow-lg transition-all"
-                >
-                  {isSaving ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
-                  ) : isSaved ? (
-                    <Check className="w-4 h-4 mr-2" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {isSaving ? "Saving..." : isSaved ? "Saved to Gallery" : "Save to Gallery"}
-                </Button>
-              )}
-            </div>
+    <div className="h-full w-full flex overflow-hidden">
+      {/* Quick sidebar for actions - Left Side */}
+      <div className="w-80 border-r border-zinc-200 bg-white flex flex-col shrink-0">
+        <div className="p-4 border-b border-zinc-100">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-zinc-900">Input</h2>
+            {image && (
+              <Button variant="ghost" size="icon" onClick={handleReset} className="h-6 w-6 text-zinc-400 hover:text-zinc-600">
+                <RefreshCw className="w-3 h-3" />
+              </Button>
+            )}
           </div>
 
-          {/* Right Content: Analysis Results */}
-          <div className="md:col-span-8 lg:col-span-9">
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-3">
-                <div className="p-1 bg-red-100 rounded-full shrink-0">!</div>
-                {error}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {!imagePreview ? (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full aspect-[3/4] rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center gap-2 hover:bg-zinc-100 hover:border-zinc-300 transition-all group"
+            >
+              <div className="h-10 w-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                <Upload className="w-5 h-5 text-zinc-400" />
               </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-zinc-700">Upload Outfit</p>
+                <p className="text-[10px] text-zinc-400">JPG, PNG, WEBP</p>
+              </div>
+            </button>
+          ) : (
+            <div className="w-full aspect-[3/4] relative rounded-lg overflow-hidden bg-zinc-100 group border border-zinc-200">
+              <img src={imagePreview} alt="Outfit" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  Change Image
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 space-y-2">
+            {image && !response && !isLoading && (
+              <Button
+                onClick={handleSubmit}
+                disabled={isRateLimited}
+                className="w-full bg-brand-lime text-black hover:bg-brand-lime/90 hover:shadow-lg transition-all font-medium"
+              >
+                {isRateLimited ? (
+                  <><Clock className="w-4 h-4 mr-2" /> Wait {formatCountdown(rateLimitCountdown)}</>
+                ) : (
+                  <><Wand2 className="w-4 h-4 mr-2" /> Analyze Style</>
+                )}
+              </Button>
             )}
 
             {isLoading && (
-              <div className="bg-white rounded-3xl border border-gray-100 p-8 space-y-6">
-                <div className="flex items-center gap-4 mb-8">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <div className="grid grid-cols-2 gap-4 mt-8">
-                  <Skeleton className="h-32 rounded-2xl" />
-                  <Skeleton className="h-32 rounded-2xl" />
-                </div>
-              </div>
+              <Button disabled className="w-full bg-zinc-100 text-zinc-400 border border-zinc-200">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent mr-2" />
+                Analyzing...
+              </Button>
             )}
 
-            {!isLoading && !response && !error && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-white/50 border border-dashed border-gray-200 rounded-3xl text-gray-400">
-                <Sparkles className="w-12 h-12 mb-4 opacity-20" />
-                <p>Ready to analyze! Click the button to get AI insights.</p>
-              </div>
-            )}
-
-            {response && !isLoading && (
-              <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
-                {/* Assessment Card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-purple-50 rounded-xl">
-                      <CheckCircle2 className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">Style Assessment</h3>
-                  </div>
-                  <div className="prose prose-sm md:prose-base max-w-none text-gray-600">
-                    <p className="leading-relaxed">
-                      {response.styleAssessment}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Grid for details */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-blue-50 rounded-xl">
-                        <Sparkles className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-bold text-gray-900">Color & Review</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 leading-relaxed font-medium">
-                      {response.colorCompositionAnalysis}
-                    </p>
-                  </div>
-
-                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-pink-50 rounded-xl">
-                        <Sparkles className="w-5 h-5 text-pink-600" />
-                      </div>
-                      <h3 className="text-base font-bold text-gray-900">Styling Tips</h3>
-                    </div>
-                    <ul className="space-y-4 text-sm text-gray-600">
-                      <li className="flex flex-col gap-1">
-                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-pink-600">Accessory</span>
-                        <span className="font-medium text-gray-800">{response.stylingRecommendations.accessory}</span>
-                      </li>
-                      <li className="flex flex-col gap-1">
-                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-purple-600">Why It Works</span>
-                        <span>{response.stylingRecommendations.reasoning}</span>
-                      </li>
-                      <li className="flex flex-col gap-1">
-                        <span className="font-bold text-gray-900 text-xs uppercase tracking-wider text-blue-600">Alternative Look</span>
-                        <span>{response.stylingRecommendations.alternativeStyling}</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+            {response && (
+              <Button
+                onClick={handleSaveToGallery}
+                disabled={isSaving || isSaved}
+                variant={isSaved ? "outline" : "default"}
+                className={`w-full font-medium transition-all ${isSaved ? "border-green-200 text-green-700 bg-green-50" : "bg-brand-lime text-black hover:bg-brand-lime/90 shadow-sm"}`}
+              >
+                {isSaving ? "Saving..." : isSaved ? <><Check className="w-4 h-4 mr-2" /> Saved</> : <><Save className="w-4 h-4 mr-2" /> Save Results</>}
+              </Button>
             )}
           </div>
         </div>
-      )}
+
+        <div className="p-4 flex-1 overflow-y-auto">
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            <p className="font-medium text-zinc-900 mb-1">How it works</p>
+            <p>Upload a clear photo of your outfit. Our AI will analyze color harmony, style coherence, and provide actionable tips.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 bg-zinc-50 flex flex-col overflow-hidden relative">
+        {error && (
+          <div className="absolute top-4 left-4 right-4 z-10 bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg flex items-center shadow-sm max-w-2xl mx-auto">
+            {error}
+          </div>
+        )}
+
+        {!response ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400">
+            <div className="h-16 w-16 mb-4 rounded-2xl bg-zinc-100 flex items-center justify-center">
+              {isLoading ? (
+                <Sparkles className="w-8 h-8 text-zinc-400 animate-pulse" />
+              ) : (
+                <Wand2 className="w-8 h-8 text-zinc-300" />
+              )}
+            </div>
+            <h3 className="text-zinc-900 font-medium mb-1">
+              {isLoading ? "Analyzing your style..." : "Ready to analyze"}
+            </h3>
+            <p className="text-sm max-w-xs text-center">
+              {isLoading ? "This usually takes about 5-10 seconds." : "Your results will appear here after analysis."}
+            </p>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6 md:p-8">
+            <div className="max-w-4xl mx-auto space-y-6">
+
+              {/* Style Assessment - Hero Card */}
+              <div className="bg-white rounded-lg border border-zinc-200 p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-zinc-900" />
+                  <h3 className="text-lg font-semibold text-zinc-900">Style Assessment</h3>
+                </div>
+                <p className="text-zinc-600 leading-relaxed">
+                  {response.styleAssessment}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Color Analysis */}
+                <div className="bg-white rounded-lg border border-zinc-200 p-6 shadow-sm flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Palette className="w-4 h-4 text-zinc-900" />
+                    <h3 className="font-semibold text-zinc-900">Color Palette</h3>
+                  </div>
+                  <p className="text-sm text-zinc-600 leading-relaxed flex-1">
+                    {response.colorCompositionAnalysis}
+                  </p>
+                </div>
+
+                {/* Recommendations */}
+                <div className="bg-white rounded-lg border border-zinc-200 p-6 shadow-sm flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="w-4 h-4 text-zinc-900" />
+                    <h3 className="font-semibold text-zinc-900">Key Insights</h3>
+                  </div>
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <span className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Best Accessory</span>
+                      <span className="text-zinc-800">{response.stylingRecommendations.accessory}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Why it works</span>
+                      <span className="text-zinc-800">{response.stylingRecommendations.reasoning}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Alternative Look</span>
+                      <span className="text-zinc-800">{response.stylingRecommendations.alternativeStyling}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

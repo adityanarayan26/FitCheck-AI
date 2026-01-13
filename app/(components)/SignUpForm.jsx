@@ -45,83 +45,87 @@ export default function SignUpForm() {
   };
 
   return (
-    <div className="h-fit w-[350px] flex flex-col items-center justify-center glass shadow-premium p-8 rounded-3xl text-black animate-in fade-in zoom-in-95 duration-500">
+    <div className="w-full bg-white border border-zinc-200 shadow-sm p-8 rounded-2xl">
       <div className="w-full text-center mb-8">
-        <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Create Account</h1>
-        <p className="text-sm text-gray-500 mt-2 font-medium">Start your style journey today.</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Create Account</h1>
+        <p className="text-sm text-zinc-500 mt-2">Start your style journey with FitCheck AI</p>
       </div>
 
       <form onSubmit={handleEmailSignUp} className="flex flex-col gap-y-4 w-full">
         <div className="relative group">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-zinc-600 transition-colors" />
           <input
             type="text"
             placeholder="Full Name"
             value={name}
-            className="outline-none border border-gray-200 pl-10 pr-3 w-full rounded-xl py-3 bg-white/50 backdrop-blur-sm placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all duration-200"
+            className="outline-none border border-zinc-200 pl-10 pr-3 w-full rounded-lg py-2.5 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 transition-all text-sm"
             onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
         <div className="relative group">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-zinc-600 transition-colors" />
           <input
             type="email"
             placeholder="Email"
             value={email}
-            className="outline-none border border-gray-200 pl-10 pr-3 w-full rounded-xl py-3 bg-white/50 backdrop-blur-sm placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all duration-200"
+            className="outline-none border border-zinc-200 pl-10 pr-3 w-full rounded-lg py-2.5 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 transition-all text-sm"
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
         <div className="relative group">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-zinc-600 transition-colors" />
           <input
             type="password"
             placeholder="Password"
             value={password}
-            className="outline-none border border-gray-200 pl-10 pr-3 w-full rounded-xl py-3 bg-white/50 backdrop-blur-sm placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all duration-200"
+            className="outline-none border border-zinc-200 pl-10 pr-3 w-full rounded-lg py-2.5 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 transition-all text-sm"
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
         <div className="relative group">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-zinc-600 transition-colors" />
           <input
             type="password"
             placeholder="Confirm Password"
             value={confirmPassword}
-            className="outline-none border border-gray-200 pl-10 pr-3 w-full rounded-xl py-3 bg-white/50 backdrop-blur-sm placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all duration-200"
+            className="outline-none border border-zinc-200 pl-10 pr-3 w-full rounded-lg py-2.5 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 transition-all text-sm"
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>
-        <Button className="w-full btn-gradient text-white font-bold py-6 rounded-xl shadow-lg shadow-purple-500/20 mt-2" type='submit'>Create Account</Button>
+        <Button
+          className="w-full bg-brand-lime text-black hover:bg-brand-lime/90 font-semibold py-5 rounded-lg transition-all mt-2"
+          type='submit'
+        >
+          Create Account
+        </Button>
       </form>
 
-      <div className="relative my-8 w-full">
+      <div className="relative my-6 w-full">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-200"></span>
+          <span className="w-full border-t border-zinc-100"></span>
         </div>
         <div className="relative flex justify-center text-xs uppercase tracking-wider">
-          <span className="bg-white/50 backdrop-blur-xl px-4 text-gray-400 font-medium rounded-full">Or continue with</span>
+          <span className="bg-white px-2 text-zinc-400">Or continue with</span>
         </div>
       </div>
 
-      <div className="w-full">
-        <Button onClick={handleGoogleSignUp} variant="outline" className="w-full bg-white hover:bg-gray-50 border-gray-200 text-gray-700 font-semibold py-6 rounded-xl transition-all duration-200 hover:shadow-md">
-          <RiGoogleFill className="mr-2 h-5 w-5 text-[#DB4437]" />
+      <div className="w-full space-y-4">
+        <Button onClick={handleGoogleSignUp} variant="outline" className="w-full bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 py-5 rounded-lg transition-all">
+          <RiGoogleFill className="mr-2 h-5 w-5" />
           Sign up with Google
         </Button>
-        {error && <p className="text-red-500 text-sm font-medium mt-4 text-center bg-red-50 py-2 rounded-lg">{error}</p>}
+        {error && <p className="text-red-500 text-sm bg-red-50 border border-red-100 p-2 rounded-lg text-center">{error}</p>}
       </div>
-      <p className="text-xs text-center text-gray-500 mt-8 font-medium">
+      <p className="text-sm text-center text-zinc-500 mt-8">
         Already have an account?{" "}
-        <Link href="/sign-in" className="text-purple-600 hover:text-purple-700 font-bold hover:underline transition-all">
+        <Link href="/sign-in" className="text-zinc-900 hover:text-black font-semibold hover:underline transition-all">
           Sign In
         </Link>
       </p>
     </div>
   );
 }
-

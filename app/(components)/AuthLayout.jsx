@@ -1,15 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function AuthLayout({ children }) {
-    return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-mesh-gradient relative overflow-hidden">
-            {/* Ambient background blobs */}
-            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none mix-blend-screen animate-float" />
-            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-pink-500/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none mix-blend-screen animate-float-delayed" />
+    const { user, loading } = useAuth();
+    const router = useRouter();
 
-            <div className="relative z-10 w-full max-w-md transition-all duration-500 ease-out">
+    useEffect(() => {
+        if (!loading && user) {
+            router.push("/dashboard");
+        }
+    }, [user, loading, router]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-lime border-t-transparent" />
+            </div>
+        );
+    }
+
+    if (user) {
+        return null; // Don't render anything while redirecting
+    }
+
+    return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-zinc-50">
+            <div className="w-full max-w-md">
                 {children}
             </div>
         </div>
